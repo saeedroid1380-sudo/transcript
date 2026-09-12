@@ -1,0 +1,1021 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>یادداشت همزمان با صدا</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0f1115">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="یادداشت صوتی">
+<style>
+  :root{
+    --bg:#0f1115;
+    --panel:#181b21;
+    --panel2:#1f232b;
+    --border:#2a2f38;
+    --text:#e9ebef;
+    --muted:#9aa2b1;
+    --accent:#6fa8ff;
+    --accent2:#4fd1a5;
+  }
+  *{box-sizing:border-box;}
+  html,body{
+    margin:0;
+    height:100%;
+  }
+  body{
+    font-family:'Vazirmatn','Tahoma',sans-serif;
+    background:var(--bg);
+    color:var(--text);
+    height:100dvh;
+    overflow:hidden;
+  }
+
+  /* ---------- fixed top bar (header + player) ---------- */
+  #topbar{
+    position:fixed;
+    top:0;
+    left:0;
+    right:0;
+    z-index:50;
+    background:var(--panel);
+    box-shadow:0 4px 14px rgba(0,0,0,.35);
+  }
+
+  header{
+    padding:10px 14px;
+    border-bottom:1px solid var(--border);
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+    background:linear-gradient(180deg, #14171d, #0f1115);
+  }
+  header h1{
+    font-size:13px;
+    margin:0;
+    font-weight:600;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    color:var(--muted);
+  }
+  .file-btn{
+    background:linear-gradient(135deg, var(--accent), #4f8ef7);
+    color:#0b0d10;
+    border:none;
+    padding:10px 18px;
+    border-radius:12px;
+    font-size:13px;
+    cursor:pointer;
+    font-weight:700;
+    white-space:nowrap;
+    flex-shrink:0;
+    box-shadow:0 2px 8px rgba(111,168,255,.25);
+  }
+  #fileInput{display:none;}
+
+  /* ---------- compact player bar ---------- */
+  .player-bar{
+    display:none;
+    flex-direction:column;
+    border-bottom:1px solid var(--border);
+  }
+  .player-bar.active{display:flex;}
+
+  .player-row{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    padding:10px 12px;
+  }
+  .side-group{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:8px;
+    flex-shrink:0;
+    min-width:96px;
+  }
+  .side-spacer{
+    flex-shrink:0;
+  }
+  .core-controls{
+    flex:1;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:14px;
+  }
+  .extra-row{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    margin-bottom:10px;
+  }
+  .ctrl-btn{
+    background:var(--panel2);
+    border:1px solid var(--border);
+    color:var(--text);
+    border-radius:10px;
+    padding:10px 13px;
+    font-size:14px;
+    cursor:pointer;
+    flex-shrink:0;
+    line-height:1;
+    min-width:44px;
+    min-height:44px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    transition:transform .08s ease, background .15s ease;
+  }
+  .ctrl-btn.big{
+    min-width:58px;
+    min-height:58px;
+    font-size:17px;
+    border-radius:14px;
+  }
+  .ctrl-btn:active{transform:scale(.92);background:var(--border);}
+  .play-btn{
+    font-size:18px;
+    padding:10px 16px;
+    background:linear-gradient(135deg, var(--accent), #4f8ef7);
+    color:#0b0d10;
+    border:none;
+    font-weight:700;
+    box-shadow:0 2px 10px rgba(111,168,255,.3);
+  }
+  .play-btn.big{
+    min-width:68px;
+    min-height:68px;
+    font-size:24px;
+  }
+  .mark-btn{
+    background:linear-gradient(135deg, var(--accent2), #34b98a);
+    color:#06251b;
+    border:none;
+    border-radius:10px;
+    font-size:18px;
+    cursor:pointer;
+    min-width:44px;
+    min-height:44px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    flex-shrink:0;
+    box-shadow:0 2px 8px rgba(79,209,165,.25);
+    transition:transform .08s ease;
+  }
+  .mark-btn:active{transform:scale(.9);}
+  .mic-btn{
+    background:linear-gradient(135deg, var(--accent), #4f8ef7);
+    color:#0b0d10;
+    box-shadow:0 2px 8px rgba(111,168,255,.25);
+    font-size:16px;
+  }
+  .mic-btn.mic-busy{opacity:.55;}
+  .mic-btn.mic-error{box-shadow:0 0 0 2px #ff5a5a inset;}
+  .time-mini{
+    font-size:12px;
+    color:var(--muted);
+    font-variant-numeric:tabular-nums;
+    white-space:nowrap;
+    flex-shrink:0;
+    background:var(--panel2);
+    padding:6px 10px;
+    border-radius:8px;
+    border:1px solid var(--border);
+  }
+  .more-btn{
+    background:var(--panel2);
+    border:1px solid var(--border);
+    color:var(--text);
+    font-size:20px;
+    font-weight:700;
+    cursor:pointer;
+    padding:8px 12px;
+    border-radius:10px;
+    min-width:44px;
+    min-height:44px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    flex-shrink:0;
+  }
+
+  .player-extra{
+    max-height:0;
+    overflow:hidden;
+    transition:max-height .18s ease;
+    padding:0 12px;
+  }
+  .player-extra.open{
+    max-height:230px;
+    padding:0 12px 12px;
+  }
+  audio{width:100%;display:block;margin-bottom:10px;border-radius:8px;}
+  .speed-row{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    font-size:13px;
+    color:var(--muted);
+    font-weight:600;
+  }
+  select{
+    background:var(--panel2);
+    color:var(--text);
+    border:1px solid var(--border);
+    border-radius:8px;
+    padding:8px 10px;
+    font-size:13px;
+  }
+
+  .empty-state{
+    color:var(--muted);
+    font-size:13px;
+    text-align:center;
+    padding:22px 14px;
+    line-height:1.8;
+  }
+
+  /* ---------- page content, pushed below fixed topbar ---------- */
+  #page{
+    height:100%;
+    display:flex;
+    flex-direction:column;
+    overflow:hidden;
+  }
+
+  .notes-col{
+    flex:1;
+    display:flex;
+    flex-direction:column;
+    padding:10px;
+    min-height:0;
+  }
+  .notes-toolbar{
+    display:flex;
+    flex-wrap:wrap;
+    justify-content:space-between;
+    align-items:center;
+    gap:8px;
+    margin-bottom:8px;
+    flex-shrink:0;
+  }
+  .notes-toolbar span{
+    font-size:12px;
+    color:var(--muted);
+    font-weight:600;
+  }
+  .mini-icon-btn{
+    background:var(--panel2);
+    border:1px solid var(--border);
+    color:var(--text);
+    border-radius:9px;
+    min-width:36px;
+    min-height:36px;
+    font-size:15px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    cursor:pointer;
+    flex-shrink:0;
+  }
+  .small-btn{
+    background:var(--panel2);
+    border:1px solid var(--border);
+    color:var(--muted);
+    border-radius:8px;
+    padding:8px 14px;
+    font-size:12px;
+    cursor:pointer;
+    font-weight:600;
+  }
+  .small-btn:active{background:var(--border);}
+
+  #notes{
+    flex:1;
+    width:100%;
+    background:var(--panel2);
+    color:var(--text);
+    border:1px solid var(--border);
+    border-radius:14px;
+    padding:16px;
+    font-size:16px;
+    line-height:2.3;
+    font-family:inherit;
+    outline:none;
+    overflow-y:auto;
+    min-height:0;
+    box-shadow:inset 0 1px 3px rgba(0,0,0,.2);
+    text-align:start;
+  }
+  #notes:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(111,168,255,.12);}
+  #notes:empty:before{
+    content:attr(data-placeholder);
+    color:var(--muted);
+  }
+
+  .ts-tag{
+    color:#0b0d10;
+    background:var(--accent);
+    cursor:pointer;
+    font-weight:700;
+    unicode-bidi:isolate;
+    padding:2px 8px;
+    border-radius:6px;
+    font-size:.85em;
+    display:inline-block;
+  }
+  .ts-tag:active{opacity:.7;}
+
+  @media (min-width:700px){
+    #topbar{position:sticky;}
+    #page{flex-direction:row;}
+  }
+
+  /* ---------- compare / transcription overlay ---------- */
+  #comparePanel{
+    display:none;
+    position:fixed;
+    inset:0;
+    background:var(--bg);
+    z-index:100;
+    flex-direction:column;
+  }
+  #comparePanel.open{display:flex;}
+  .compare-header{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding:14px;
+    border-bottom:1px solid var(--border);
+    font-size:13px;
+    font-weight:700;
+    flex-shrink:0;
+  }
+  #compareBody{
+    flex:1;
+    overflow-y:auto;
+    padding:16px;
+    font-size:15px;
+    line-height:2.1;
+    text-align:left;
+  }
+  #compareBody .status-line{
+    color:var(--muted);
+    font-size:14px;
+    text-align:center;
+    margin-top:30px;
+    line-height:1.9;
+  }
+  #compareBody .progress-track{
+    width:100%;
+    max-width:320px;
+    height:8px;
+    background:var(--panel2);
+    border-radius:6px;
+    margin:14px auto 0;
+    overflow:hidden;
+  }
+  #compareBody .progress-fill{
+    height:100%;
+    background:var(--accent);
+    width:0%;
+    transition:width .2s ease;
+  }
+  .diff-removed{
+    color:#ff8a8a;
+    text-decoration:line-through;
+    background:rgba(255,80,80,.12);
+    border-radius:3px;
+    padding:0 2px;
+  }
+  .diff-added{
+    color:#7ee7a8;
+    background:rgba(79,209,165,.15);
+    border-radius:3px;
+    padding:0 2px;
+  }
+  .diff-section-title{
+    color:var(--muted);
+    font-size:12px;
+    font-weight:700;
+    margin:18px 0 8px;
+    text-transform:uppercase;
+    letter-spacing:.03em;
+  }
+</style>
+</head>
+<body>
+
+<div id="topbar">
+  <header>
+    <h1 id="fileName">یادداشت همزمان با فایل صوتی</h1>
+    <label class="file-btn" for="fileInput">انتخاب فایل صوتی</label>
+    <input type="file" id="fileInput" accept="audio/*">
+  </header>
+
+  <div id="emptyPlayer" class="empty-state">فایل صوتی رو انتخاب کن تا پخش‌کننده فعال بشه.</div>
+
+  <div class="player-bar" id="playerBar">
+    <div class="player-row">
+      <div class="side-group">
+        <button class="more-btn" id="moreBtn" title="گزینه‌های بیشتر">⋯</button>
+        <button class="mark-btn" id="markBtn" title="درج زمان فعلی در یادداشت">⏱</button>
+      </div>
+      <div class="core-controls">
+        <button class="ctrl-btn big" data-seek="-5">◀ 5</button>
+        <button class="ctrl-btn play-btn big" id="playPause">▶</button>
+        <button class="ctrl-btn big" data-seek="5">5 ▶</button>
+      </div>
+      <div class="side-group" style="visibility:hidden;" aria-hidden="true">
+        <button class="more-btn">·</button>
+        <button class="mark-btn">·</button>
+      </div>
+    </div>
+    <div class="player-extra" id="playerExtra">
+      <audio id="audio" controls></audio>
+      <div class="extra-row">
+        <button class="ctrl-btn" data-seek="-10">◀ 10</button>
+        <button class="ctrl-btn" data-seek="10">10 ▶</button>
+      </div>
+      <div class="speed-row">
+        سرعت:
+        <select id="speed">
+          <option value="0.75">۰.۷۵×</option>
+          <option value="1" selected>۱×</option>
+          <option value="1.25">۱.۲۵×</option>
+          <option value="1.5">۱.۵×</option>
+          <option value="2">۲×</option>
+        </select>
+      </div>
+      <div class="speed-row">
+        کیفیت تشخیص گفتار:
+        <select id="modelQuality">
+          <option value="Xenova/whisper-tiny.en">سبک (۴۰ مگ، مطمئن‌تر رو موبایل دیتا)</option>
+          <option value="Xenova/whisper-base.en" selected>بهتر (۱۵۰ مگ، ترجیحاً وای‌فای)</option>
+        </select>
+      </div>
+      <button class="small-btn" id="clearCacheBtn" style="width:100%;margin-top:8px;">🗑️ پاک‌سازی کامل مدل‌های دانلودشده</button>
+    </div>
+  </div>
+</div>
+
+<div id="page">
+  <div class="notes-col">
+    <div class="notes-toolbar">
+      <span>یادداشت‌ها <span class="time-mini" id="curTime" style="margin-inline-start:8px;">۰۰:۰۰</span></span>
+      <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+        <button class="mini-icon-btn" id="rawBtn" title="نمایش متن خام ترنسکریپت">📄</button>
+        <button class="mini-icon-btn mic-btn" id="micBtn" title="مقایسه با گفتار فایل صوتی">🎙️</button>
+        <button class="small-btn" id="downloadBtn">دانلود (txt)</button>
+      </div>
+    </div>
+    <div id="notes" contenteditable="true" dir="auto" data-placeholder="همین‌جا بنویس..."></div>
+  </div>
+</div>
+
+<div id="comparePanel">
+  <div class="compare-header">
+    <span>مقایسه با گفتار فایل صوتی</span>
+    <button class="small-btn" id="closeCompare">✕ بستن</button>
+  </div>
+  <div id="compareBody" dir="ltr"></div>
+</div>
+
+<script>
+const fileInput = document.getElementById('fileInput');
+const fileName = document.getElementById('fileName');
+const audio = document.getElementById('audio');
+const playerBar = document.getElementById('playerBar');
+const emptyPlayer = document.getElementById('emptyPlayer');
+const curTime = document.getElementById('curTime');
+const playPause = document.getElementById('playPause');
+const markBtn = document.getElementById('markBtn');
+const notes = document.getElementById('notes');
+const speed = document.getElementById('speed');
+const downloadBtn = document.getElementById('downloadBtn');
+const moreBtn = document.getElementById('moreBtn');
+const playerExtra = document.getElementById('playerExtra');
+const topbar = document.getElementById('topbar');
+const page = document.getElementById('page');
+const micBtn = document.getElementById('micBtn');
+const rawBtn = document.getElementById('rawBtn');
+const clearCacheBtn = document.getElementById('clearCacheBtn');
+const modelQuality = document.getElementById('modelQuality');
+const comparePanel = document.getElementById('comparePanel');
+const compareBody = document.getElementById('compareBody');
+const closeCompare = document.getElementById('closeCompare');
+
+function fmt(sec){
+  if(!isFinite(sec)) return '۰۰:۰۰';
+  const m = Math.floor(sec/60).toString().padStart(2,'0');
+  const s = Math.floor(sec%60).toString().padStart(2,'0');
+  return `${m}:${s}`;
+}
+
+document.querySelectorAll('.ctrl-btn, .play-btn, .mark-btn, .more-btn, .mini-icon-btn').forEach(btn=>{
+  btn.addEventListener('mousedown', (e)=> e.preventDefault());
+});
+
+// keep page content below the fixed topbar, whatever its current height is
+function syncTopbarHeight(){
+  page.style.paddingTop = topbar.offsetHeight + 'px';
+}
+new ResizeObserver(syncTopbarHeight).observe(topbar);
+syncTopbarHeight();
+
+// pin the topbar to the ACTUAL visible viewport (not the full layout viewport),
+// so it stays put even when the mobile keyboard pushes/resizes the visible area
+if(window.visualViewport){
+  function pinToVisibleViewport(){
+    const vv = window.visualViewport;
+    topbar.style.transform = `translateY(${vv.offsetTop}px)`;
+    topbar.style.width = vv.width + 'px';
+  }
+  window.visualViewport.addEventListener('resize', pinToVisibleViewport);
+  window.visualViewport.addEventListener('scroll', pinToVisibleViewport);
+  pinToVisibleViewport();
+}
+
+// ask the browser not to auto-evict our cached model files (best effort — the browser
+// decides based on its own heuristics, this just asks for "protected" storage)
+if(navigator.storage && navigator.storage.persist){
+  navigator.storage.persist().catch(()=>{});
+}
+
+// register the service worker so the app shell can be installed and opened offline
+// (this only matters when served from a real https:// address, e.g. GitHub Pages —
+// it's silently skipped when opened as a local file, which is expected)
+if('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')){
+  window.addEventListener('load', ()=>{
+    navigator.serviceWorker.register('service-worker.js').catch(()=>{});
+  });
+}
+
+// ---------- per-line direction detection (fixes mixed Persian/English lines) ----------
+function ensureLineDirs(){
+  notes.setAttribute('dir', 'auto');
+  Array.from(notes.children).forEach(child=>{
+    if(child.nodeType === 1) child.setAttribute('dir', 'auto');
+  });
+}
+ensureLineDirs();
+
+audio.addEventListener('timeupdate', ()=>{
+  curTime.textContent = fmt(audio.currentTime);
+});
+audio.addEventListener('play', ()=> playPause.textContent = '⏸');
+audio.addEventListener('pause', ()=> playPause.textContent = '▶');
+
+playPause.addEventListener('click', ()=>{
+  if(audio.paused) audio.play(); else audio.pause();
+});
+
+document.querySelectorAll('[data-seek]').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    audio.currentTime = Math.max(0, audio.currentTime + parseFloat(btn.dataset.seek));
+  });
+});
+
+speed.addEventListener('change', ()=>{
+  audio.playbackRate = parseFloat(speed.value);
+});
+
+moreBtn.addEventListener('click', ()=>{
+  playerExtra.classList.toggle('open');
+});
+
+markBtn.addEventListener('click', insertTimestamp);
+
+document.addEventListener('keydown', (e)=>{
+  if(e.ctrlKey && e.code === 'Space'){
+    e.preventDefault();
+    insertTimestamp();
+  }
+});
+
+function insertTimestamp(){
+  if(!audio.src) return;
+  const t = fmt(audio.currentTime);
+  const span = document.createElement('span');
+  span.className = 'ts-tag';
+  span.contentEditable = 'false';
+  span.dataset.time = audio.currentTime;
+  span.textContent = `[${t}]`;
+
+  notes.focus();
+  const sel = window.getSelection();
+  let range;
+  if(sel.rangeCount && notes.contains(sel.anchorNode)){
+    range = sel.getRangeAt(0);
+  } else {
+    range = document.createRange();
+    range.selectNodeContents(notes);
+    range.collapse(false);
+  }
+  range.deleteContents();
+  range.insertNode(span);
+  const space = document.createTextNode(' ');
+  range.setStartAfter(span);
+  range.insertNode(space);
+  range.setStartAfter(space);
+  range.collapse(true);
+  sel.removeAllRanges();
+  sel.addRange(range);
+}
+
+notes.addEventListener('click', (e)=>{
+  if(e.target.classList.contains('ts-tag')){
+    const t = parseFloat(e.target.dataset.time);
+    if(!isNaN(t)){
+      audio.currentTime = t;
+      audio.play();
+    }
+  }
+});
+
+notes.addEventListener('input', ()=>{
+  ensureLineDirs();
+  if(comparePanel.classList.contains('open') && transcriptState === 'done'){
+    renderCompareBody();
+  }
+});
+
+downloadBtn.addEventListener('click', ()=>{
+  let text = '';
+  notes.childNodes.forEach(node=>{
+    text += node.textContent;
+  });
+  const blob = new Blob([text], {type:'text/plain;charset=utf-8'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'yaddasht.txt';
+  a.click();
+});
+
+// ---------- speech extraction + comparison (runs fully on-device, English only) ----------
+let currentFile = null;
+let transcriptState = 'idle'; // idle | model | processing | done | error
+let transcriptText = '';
+let transcriptError = '';
+let modelProgressPct = 0;
+let modelProgressFile = '';
+
+fileInput.addEventListener('change', (e)=>{
+  const f = e.target.files[0];
+  if(!f) return;
+  const url = URL.createObjectURL(f);
+  audio.src = url;
+  fileName.textContent = f.name;
+  playerBar.classList.add('active');
+  emptyPlayer.style.display = 'none';
+
+  currentFile = f;
+  transcriptState = 'idle';
+  transcriptText = '';
+  transcriptError = '';
+  modelProgressPct = 0;
+  refreshMicBadge();
+  autoTranscribe(f, modelQuality.value); // start transcribing automatically in the background
+});
+
+closeCompare.addEventListener('click', ()=> comparePanel.classList.remove('open'));
+
+let compareMode = 'diff'; // 'diff' | 'raw'
+
+micBtn.addEventListener('click', ()=>{
+  compareMode = 'diff';
+  comparePanel.classList.add('open');
+  renderCompareBody();
+});
+
+rawBtn.addEventListener('click', ()=>{
+  compareMode = 'raw';
+  comparePanel.classList.add('open');
+  renderCompareBody();
+});
+
+// re-transcribe automatically if the user switches quality after a file is already loaded
+modelQuality.addEventListener('change', ()=>{
+  if(!currentFile) return;
+  transcriptState = 'idle';
+  transcriptText = '';
+  transcriptError = '';
+  modelProgressPct = 0;
+  refreshMicBadge();
+  autoTranscribe(currentFile, modelQuality.value);
+});
+
+function refreshMicBadge(){
+  micBtn.classList.toggle('mic-busy', transcriptState === 'model' || transcriptState === 'processing');
+  micBtn.classList.toggle('mic-error', transcriptState === 'error');
+}
+
+function showStatus(html){
+  compareBody.innerHTML = `<div class="status-line">${html}</div>`;
+}
+
+function showProgress(pct, label){
+  compareBody.innerHTML = `
+    <div class="status-line">${label}
+      <div class="progress-track"><div class="progress-fill" style="width:${pct}%"></div></div>
+    </div>`;
+}
+
+// ---------- run the heavy transcription work in a Web Worker so the page never freezes ----------
+let speechWorker = null;
+
+function getSpeechWorker(){
+  if(speechWorker) return speechWorker;
+
+  const workerCode = `
+    let transcriberPromises = {};
+    const STALL_TIMEOUT_MS = 25000;
+
+    async function getTranscriber(modelId){
+      if(transcriberPromises[modelId]) return transcriberPromises[modelId];
+      transcriberPromises[modelId] = new Promise(async (resolve, reject)=>{
+        let lastProgressAt = Date.now();
+        const stallWatcher = setInterval(()=>{
+          if(Date.now() - lastProgressAt > STALL_TIMEOUT_MS){
+            clearInterval(stallWatcher);
+            delete transcriberPromises[modelId];
+            reject(new Error('دانلود مدل قطع شد (احتمالاً به‌خاطر افت اینترنت). دوباره امتحان کن، ترجیحاً با وای‌فای یا مدل سبک‌تر.'));
+          }
+        }, 3000);
+        try{
+          const { pipeline } = await import('https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.1');
+          const transcriber = await pipeline('automatic-speech-recognition', modelId, {
+            progress_callback: (p)=>{
+              lastProgressAt = Date.now();
+              if(p.status === 'progress'){
+                postMessage({type:'model-progress', pct: Math.round(p.progress || 0), file: p.file || ''});
+              }
+            }
+          });
+          clearInterval(stallWatcher);
+          resolve(transcriber);
+        }catch(err){
+          clearInterval(stallWatcher);
+          delete transcriberPromises[modelId];
+          reject(err);
+        }
+      });
+      return transcriberPromises[modelId];
+    }
+
+    self.onmessage = async (e)=>{
+      const msg = e.data;
+      if(msg.type === 'clear-cache'){
+        transcriberPromises = {};
+        return;
+      }
+      if(msg.type !== 'transcribe') return;
+      const { modelId, audioData, chunkSeconds } = msg;
+      try{
+        postMessage({type:'state', state:'model'});
+        const transcriber = await getTranscriber(modelId);
+        postMessage({type:'state', state:'processing'});
+        const sampleRate = 16000;
+        const chunkSize = chunkSeconds * sampleRate;
+        const totalChunks = Math.max(1, Math.ceil(audioData.length / chunkSize));
+        let fullText = '';
+        for(let i=0; i<totalChunks; i++){
+          const start = i * chunkSize;
+          const end = Math.min(start + chunkSize, audioData.length);
+          const segment = audioData.subarray(start, end);
+          const out = await transcriber(segment);
+          const piece = (out.text || '').trim();
+          if(piece) fullText += (fullText ? ' ' : '') + piece;
+          postMessage({type:'chunk-progress', current: i+1, total: totalChunks});
+        }
+        postMessage({type:'done', text: fullText});
+      }catch(err){
+        postMessage({type:'error', message: (err && err.message) ? err.message : 'خطای نامشخص'});
+      }
+    };
+  `;
+
+  const blob = new Blob([workerCode], {type: 'application/javascript'});
+  speechWorker = new Worker(URL.createObjectURL(blob));
+
+  speechWorker.onmessage = (e)=>{
+    const msg = e.data;
+    if(msg.type === 'model-progress'){
+      modelProgressPct = msg.pct;
+      modelProgressFile = msg.file;
+      if(comparePanel.classList.contains('open') && transcriptState === 'model'){
+        showProgress(modelProgressPct, `در حال دانلود مدل تشخیص گفتار (یک‌بار انجام می‌شه)… ${modelProgressFile}`);
+      }
+    } else if(msg.type === 'state'){
+      transcriptState = msg.state;
+      refreshMicBadge();
+      if(comparePanel.classList.contains('open')) renderCompareBody();
+    } else if(msg.type === 'chunk-progress'){
+      if(comparePanel.classList.contains('open') && transcriptState === 'processing'){
+        showProgress(Math.round((msg.current / msg.total) * 100), `در حال تشخیص گفتار… بخش ${msg.current} از ${msg.total} (می‌تونی همچنان بنویسی)`);
+      }
+    } else if(msg.type === 'done'){
+      transcriptText = msg.text;
+      transcriptState = 'done';
+      refreshMicBadge();
+      if(comparePanel.classList.contains('open')) renderCompareBody();
+    } else if(msg.type === 'error'){
+      transcriptState = 'error';
+      transcriptError = msg.message;
+      refreshMicBadge();
+      if(comparePanel.classList.contains('open')) renderCompareBody();
+    }
+  };
+
+  speechWorker.onerror = ()=>{
+    transcriptState = 'error';
+    transcriptError = 'خطای غیرمنتظره توی پردازش پس‌زمینه.';
+    refreshMicBadge();
+    if(comparePanel.classList.contains('open')) renderCompareBody();
+  };
+
+  return speechWorker;
+}
+
+async function decodeAudioTo16kMono(file){
+  const arrayBuffer = await file.arrayBuffer();
+  const AC = window.AudioContext || window.webkitAudioContext;
+  const tempCtx = new AC();
+  const decoded = await tempCtx.decodeAudioData(arrayBuffer);
+  tempCtx.close();
+  const offlineCtx = new OfflineAudioContext(1, Math.ceil(decoded.duration * 16000), 16000);
+  const source = offlineCtx.createBufferSource();
+  source.buffer = decoded;
+  source.connect(offlineCtx.destination);
+  source.start(0);
+  const rendered = await offlineCtx.startRendering();
+  return { data: rendered.getChannelData(0), duration: decoded.duration };
+}
+
+function tokenizeWords(text){
+  return (text.match(/[A-Za-z']+/g) || []);
+}
+
+// classic word-level diff (LCS-based)
+function diffWords(a, b){
+  const n = a.length, m = b.length;
+  const dp = Array.from({length:n+1}, ()=> new Array(m+1).fill(0));
+  for(let i=n-1;i>=0;i--){
+    for(let j=m-1;j>=0;j--){
+      dp[i][j] = a[i].toLowerCase() === b[j].toLowerCase()
+        ? dp[i+1][j+1] + 1
+        : Math.max(dp[i+1][j], dp[i][j+1]);
+    }
+  }
+  let i=0, j=0;
+  const out = [];
+  while(i<n && j<m){
+    if(a[i].toLowerCase() === b[j].toLowerCase()){
+      out.push({type:'same', word:a[i]}); i++; j++;
+    } else if(dp[i+1][j] >= dp[i][j+1]){
+      out.push({type:'removed', word:a[i]}); i++;
+    } else {
+      out.push({type:'added', word:b[j]}); j++;
+    }
+  }
+  while(i<n){ out.push({type:'removed', word:a[i]}); i++; }
+  while(j<m){ out.push({type:'added', word:b[j]}); j++; }
+  return out;
+}
+
+function renderDiff(noteWords, transcriptWords){
+  let bodyHtml = `<div class="diff-section-title">مقایسه (قرمز = توی یادداشتت هست ولی توی صدا نبود / سبز = توی صدا هست ولی توی یادداشتت نیست)</div><div>`;
+  if(noteWords.length === 0){
+    compareBody.innerHTML = `<div class="status-line">هنوز چیزی ننوشتی. شروع کن به نوشتن، مقایسه خودش جلو میره.</div>`;
+    return;
+  }
+
+  // align against a generous chunk of the transcript (not just a tiny slice) so a
+  // mismatch near the start doesn't throw off everything after it, but still bounded
+  // so it can't freeze the browser on a very long recording
+  const ALIGN_MAX = Math.max(200, noteWords.length * 4 + 100);
+  const alignTranscript = transcriptWords.slice(0, ALIGN_MAX);
+
+  if(noteWords.length * alignTranscript.length > 6000 * 6000){
+    compareBody.innerHTML = `<div class="status-line">متن خیلی طولانیه، مقایسه‌ی دقیق ممکنه گوشی رو کند کنه، برای همین رد شد. می‌تونی از دکمه‌ی 📄 متن خام رو ببینی.</div>`;
+    return;
+  }
+
+  const diff = diffWords(noteWords, alignTranscript);
+
+  // cut the display off right where your written text ends — drop the trailing
+  // "added" (green) words, since those are just audio you haven't written yet
+  let lastConsumedIdx = -1;
+  for(let k=0;k<diff.length;k++){
+    if(diff[k].type === 'same' || diff[k].type === 'removed') lastConsumedIdx = k;
+  }
+  const shown = lastConsumedIdx >= 0 ? diff.slice(0, lastConsumedIdx+1) : diff;
+
+  bodyHtml += shown.map(d=>{
+    if(d.type === 'same') return `<span>${d.word}</span>`;
+    if(d.type === 'removed') return `<span class="diff-removed">${d.word}</span>`;
+    return `<span class="diff-added">${d.word}</span>`;
+  }).join(' ') + '</div>';
+
+  const consumedTranscriptCount = shown.filter(d=> d.type === 'same' || d.type === 'added').length;
+  if(transcriptWords.length > consumedTranscriptCount){
+    bodyHtml += `<div class="status-line" style="margin-top:16px;">فقط بخشی که تا الان نوشتی مقایسه شد. هرچی بیشتر بنویسی، مقایسه بیشتر جلو می‌ره.</div>`;
+  }
+  compareBody.innerHTML = bodyHtml;
+}
+
+function renderCompareBody(){
+  if(transcriptState === 'model'){
+    if(modelProgressPct > 0){
+      showProgress(modelProgressPct, `در حال دانلود مدل تشخیص گفتار (یک‌بار انجام می‌شه)… ${modelProgressFile}`);
+    } else {
+      showStatus('در حال آماده‌سازی مدل تشخیص گفتار…');
+    }
+  } else if(transcriptState === 'processing'){
+    showStatus('در حال تشخیص گفتار از روی فایل صوتی… می‌تونی همچنان بنویسی، تا آماده بشه صبر کن.');
+  } else if(transcriptState === 'error'){
+    showStatus('مشکلی پیش اومد: ' + transcriptError + '<br><br><button class="small-btn" id="retryTranscribe">امتحان دوباره</button>');
+    const retryBtn = document.getElementById('retryTranscribe');
+    if(retryBtn) retryBtn.addEventListener('click', ()=>{ if(currentFile) autoTranscribe(currentFile, modelQuality.value); });
+  } else if(transcriptState === 'done'){
+    if(compareMode === 'raw'){
+      compareBody.innerHTML = `<div class="diff-section-title">متن خام ترنسکریپت (کامل)</div><div style="color:var(--text);">${transcriptText.trim() ? transcriptText : '(چیزی تشخیص داده نشد)'}</div>`;
+    } else {
+      const transcriptWords = tokenizeWords(transcriptText);
+      const noteWords = tokenizeWords(notes.textContent || '');
+      renderDiff(noteWords, transcriptWords);
+    }
+  } else {
+    showStatus('فایل صوتی رو انتخاب کن تا خودکار شروع به تشخیص گفتار کنه.');
+  }
+}
+
+async function autoTranscribe(file, modelId){
+  transcriptState = 'model';
+  modelProgressPct = 0;
+  refreshMicBadge();
+  if(comparePanel.classList.contains('open')) renderCompareBody();
+  try{
+    const { data: audioData, duration } = await decodeAudioTo16kMono(file);
+    if(comparePanel.classList.contains('open') && transcriptState === 'model'){
+      const mins = Math.ceil(duration / 60);
+      showStatus(`فایل (${mins} دقیقه‌ای) آماده شد، در حال شروع تشخیص گفتار در پس‌زمینه… صفحه قفل نمی‌شه، می‌تونی همچنان بنویسی.`);
+    }
+    const worker = getSpeechWorker();
+    // transfer the underlying buffer to the worker (no copy) — audioData can't be used
+    // on this side after this call, but we're done with it here anyway
+    worker.postMessage({ type: 'transcribe', modelId, audioData, chunkSeconds: 28 }, [audioData.buffer]);
+  }catch(err){
+    transcriptState = 'error';
+    transcriptError = (err && err.message) ? err.message : 'خطای نامشخص';
+    refreshMicBadge();
+    if(comparePanel.classList.contains('open')) renderCompareBody();
+  }
+}
+
+// ---------- clear ALL cached model files belonging to this page (any version) ----------
+clearCacheBtn.addEventListener('click', async ()=>{
+  if(!('caches' in window)){
+    alert('این قابلیت روی این مرورگر در دسترس نیست.');
+    return;
+  }
+  clearCacheBtn.disabled = true;
+  const original = clearCacheBtn.textContent;
+  clearCacheBtn.textContent = 'در حال پاک‌کردن…';
+  try{
+    const cacheNames = await caches.keys();
+    let deletedCount = 0;
+    for(const name of cacheNames){
+      const cache = await caches.open(name);
+      const requests = await cache.keys();
+      for(const req of requests){
+        // catches any Whisper model file (tiny/base/small/…, any version), wherever it's hosted
+        if(/whisper|onnx|huggingface\.co/i.test(req.url)){
+          await cache.delete(req);
+          deletedCount++;
+        }
+      }
+    }
+    if(speechWorker) speechWorker.postMessage({type:'clear-cache'});
+    alert(deletedCount > 0
+      ? `${deletedCount} فایل پاک شد. دفعه‌ی بعد که لازم بشه، دوباره دانلود می‌شه.`
+      : 'چیزی برای پاک کردن پیدا نشد (این یعنی این فایل هیچی کش‌شده نداره).');
+  }catch(err){
+    alert('پاک کردن انجام نشد: ' + (err && err.message ? err.message : ''));
+  }finally{
+    clearCacheBtn.disabled = false;
+    clearCacheBtn.textContent = original;
+  }
+});
+</script>
+</body>
+</html>
